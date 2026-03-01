@@ -6,14 +6,29 @@ const fs = require("fs");
 const libre = require("libreoffice-convert");
 
 const app = express();
-const port = 3000;
+
+//  Render requires this
+const port = process.env.PORT || 3000;
 
 app.use(cors());
+app.use(express.json());
+
+// Ensure folders exist
+const uploadDir = path.join(__dirname, "uploads");
+const filesDir = path.join(__dirname, "files");
+
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+
+if (!fs.existsSync(filesDir)) {
+    fs.mkdirSync(filesDir);
+}
 
 // storage setup
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, "uploads/");
+        cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -22,51 +37,52 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// convert route
+// Test route
+app.get("/", (req, res) => {
+    res.send("Word to PDF Backend is running successfully");
+});
+
+// Convert route
 app.post("/convertFile", upload.single("file"), (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({
-                message: "No file uploaded",
+
+    if (!req.file) {
+        return res.status(400).json({
+            message: "No file uploaded",
+        });
+    }
+
+    const inputPath = req.file.path;
+
+    const outputPath = path.join(
+        filesDir,
+        path.parse(req.file.filename).name + ".pdf"
+    );
+
+    const file = fs.readFileSync(inputPath);
+
+    libre.convert(file, ".pdf", undefined, (err, done) => {
+
+        if (err) {
+            console.log(err);
+            return res.status(500).json({
+                message: "Conversion failed",
             });
         }
 
-        const inputPath = req.file.path;
+        fs.writeFileSync(outputPath, done);
 
-        const outputPath = path.join(
-            __dirname,
-            "files",
-            path.parse(req.file.filename).name + ".pdf"
-        );
+        res.download(outputPath, () => {
 
-        const file = fs.readFileSync(inputPath);
+            fs.unlinkSync(inputPath);
+            fs.unlinkSync(outputPath);
 
-        libre.convert(file, ".pdf", undefined, (err, done) => {
-            if (err) {
-                console.log(err);
-                return res.status(500).json({
-                    message: "Conversion failed",
-                });
-            }
-
-            fs.writeFileSync(outputPath, done);
-
-            res.download(outputPath, () => {
-                console.log("File downloaded");
-
-                fs.unlinkSync(inputPath);
-                fs.unlinkSync(outputPath);
-            });
         });
 
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({
-            message: "Internal server error",
-        });
-    }
+    });
+
 });
 
+// Start server
 app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
+    console.log(`Server running on port ${port}`);
 });
