@@ -19,13 +19,13 @@ function Home() {
     const formData = new FormData();
     formData.append("file", selectedFile);
     try {
-      const response = await axios.post(
-        "https://word-to-pdf-production-4d7c.up.railway.app/convertFile",
-        formData,
-        {
-          responseType: "blob",
-        }
-      );
+     const response = await axios.post(
+        "https://word-to-pdf-production-c326.up.railway.app/convertFile",
+       formData,
+       {
+           responseType: "blob",
+       }
+     );
       console.log(response.data);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       console.log(url);
