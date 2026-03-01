@@ -4,10 +4,10 @@ RUN apt-get update && apt-get install -y libreoffice
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY Backend/package*.json ./
 RUN npm install
 
-COPY . .
+COPY Backend .
 
 EXPOSE 3000
 
